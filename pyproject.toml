@@ -1,0 +1,18 @@
+[project]
+name = "pipecat-voice-agent"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "dotenv>=0.9.9",
+    "fastapi>=0.142.4",
+    "google-genai>=2.28.0",
+    "pipecat-ai[daily,deepgram,google,ollama,runner,webrtc]>=1.12.0",
+    "pipecat-rumik>=0.1.4",
+    "psycopg[binary]>=3.3.6",
+    "pydantic>=2.13.5",
+    "python-dotenv>=1.2.4",
+    "tzdata>=2026.5",
+    "uvicorn[standard]>=0.54.0",
+]

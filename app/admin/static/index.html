@@ -1,0 +1,783 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clinic Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F4F8F7; --card:#fff; --line:#E1EBE9; --row:#EEF4F3;
+  --ink:#24403D; --muted:#5B7370; --teal:#2F7F78; --teal-dark:#1F6B63;
+  --teal-soft:#E3F2EF; --green:#2A8F61; --red:#D9695F; --red-text:#A4443C;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Nunito',system-ui,sans-serif;font-size:15px}
+[hidden]{display:none !important}
+.app{display:flex;min-height:100vh}
+
+/* sidebar */
+.side{width:15rem;flex:none;background:var(--card);border-right:1px solid var(--line);padding:1.5rem 1rem;display:flex;flex-direction:column;gap:.35rem}
+.brand{display:flex;align-items:center;gap:.7rem;padding:.25rem .5rem 1.25rem}
+.logo{width:2.4rem;height:2.4rem;border-radius:.8rem;background:var(--teal);color:#fff;display:grid;place-items:center;font-weight:800;font-size:1.1rem}
+.nav{display:block;padding:.8rem .9rem;border-radius:.75rem;color:#4A6460;text-decoration:none;font-weight:600}
+.nav:hover{background:#F0F6F5}
+.nav.on{background:var(--teal-soft);color:var(--teal-dark)}
+.nav:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+
+/* layout */
+.main{flex:1;min-width:0;padding:2rem 2.25rem;display:flex;flex-direction:column;gap:1.5rem}
+.view{display:flex;flex-direction:column;gap:1.5rem}
+h1{margin:0;font-size:1.9rem;font-weight:800}
+h2{margin:0 0 .6rem;font-size:1.15rem}
+.sub{margin:.3rem 0 0;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:1rem;padding:1.25rem 1.4rem}
+.grid{display:grid;grid-template-columns:1fr 20rem;gap:1.5rem;align-items:start}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+.k{color:var(--muted);font-size:.85rem;font-weight:600}
+.n{font-size:2rem;font-weight:800;color:var(--teal-dark)}
+
+/* table */
+.wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:36rem}
+table.wide{min-width:52rem}
+th{text-align:left;font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:.6rem .5rem;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:.35rem .5rem;border-bottom:1px solid var(--row)}
+tr.dim td{color:var(--muted)}
+td.name{font-weight:700}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+td.msg{padding:1.4rem .5rem;color:var(--muted);text-align:center}
+td small{display:block;color:var(--muted);font-size:.78rem}
+.chip{display:inline-block;padding:.2rem .65rem;border-radius:2rem;font-size:.8rem;font-weight:700}
+.chip.booked{background:#E0F2EE;color:#1F6B63}
+.chip.completed{background:#E8EEFA;color:#2F4F86}
+.chip.cancelled{background:#FBEAE8;color:#A4443C}
+
+/* buttons and fields */
+.lnk{background:none;border:0;color:var(--teal);font:inherit;font-weight:700;cursor:pointer;padding:.7rem .5rem}
+.lnk.danger{color:var(--red-text)}
+.lnk:hover{text-decoration:underline}
+.btn{border:0;border-radius:.8rem;background:var(--teal);color:#fff;font:inherit;font-weight:800;cursor:pointer;padding:.9rem 1.2rem}
+.btn:hover{background:var(--teal-dark)}
+.btn.ghost{background:#fff;color:var(--ink);border:1px solid #CFE0DD}
+.btn.ghost:hover{background:#F0F6F5}
+.btn.danger{background:var(--red-text)}
+.btn.danger:hover{background:#8B3830}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+.btn.small{padding:.6rem 1rem;font-weight:700}
+.lbl{display:block;font-weight:700;font-size:.85rem;margin:.9rem 0 .35rem}
+.in{width:100%;padding:.75rem .8rem;border:1px solid #CFE0DD;border-radius:.7rem;font:inherit;color:var(--ink);background:#FBFDFC}
+.in:focus,.btn:focus-visible,.lnk:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
+.hint{margin:.4rem 0 0;font-size:.8rem;color:var(--muted)}
+.err{margin:.8rem 0 0;color:var(--red-text);font-weight:600;font-size:.9rem}
+
+/* filters + pager */
+.filters{display:flex;flex-wrap:wrap;gap:.75rem 1rem;align-items:flex-end;margin-bottom:1rem}
+.filters .f{display:flex;flex-direction:column;gap:.3rem;min-width:9rem;flex:1 1 9rem}
+.filters .f.grow{flex:2 1 14rem}
+.filters .lbl{margin:0}
+.pager{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-top:1rem;color:var(--muted);font-weight:600}
+.pager .btns{display:flex;gap:.5rem}
+.live{display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;font-weight:700;color:var(--teal-dark)}
+.live::before{content:"";width:.5rem;height:.5rem;border-radius:50%;background:var(--green)}
+
+/* on/off switch: red when off (left), green when on (right) */
+.sw{position:relative;display:inline-flex;align-items:center;gap:.6rem;min-height:2.75rem;cursor:pointer;font-weight:700}
+.sw input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.trk{position:relative;flex:none;width:3.1rem;height:1.7rem;border-radius:2rem;background:var(--red);transition:background .2s}
+.trk::after{content:"";position:absolute;top:.2rem;left:.2rem;width:1.3rem;height:1.3rem;border-radius:50%;background:#fff;transition:transform .2s}
+.sw input:checked ~ .trk{background:var(--green)}
+.sw input:checked ~ .trk::after{transform:translateX(1.4rem)}
+.sw input:focus-visible ~ .trk{outline:2px solid var(--ink);outline-offset:2px}
+.sw input:disabled ~ *{opacity:.6}
+.st{color:var(--red-text);min-width:4.5rem}
+.st::before{content:"Inactive"}
+.sw input:checked ~ .st{color:var(--teal-dark)}
+.sw input:checked ~ .st::before{content:"Active"}
+
+/* dialogs + toast */
+dialog{border:1px solid var(--line);border-radius:1rem;padding:1.4rem;width:min(26rem,calc(100% - 2rem));color:var(--ink);font-family:inherit}
+dialog::backdrop{background:rgba(36,64,61,.35)}
+.row{display:flex;gap:.7rem;justify-content:flex-end;margin-top:1.25rem}
+#toast{position:fixed;left:50%;bottom:1.5rem;transform:translateX(-50%);background:var(--ink);color:#fff;padding:.8rem 1.2rem;border-radius:.8rem;font-weight:700;opacity:0;pointer-events:none;transition:opacity .2s;max-width:calc(100% - 2rem)}
+#toast.show{opacity:1}
+#toast.bad{background:var(--red-text)}
+
+@media (max-width:900px){
+  .app{flex-direction:column}
+  .side{width:auto;flex-direction:row;flex-wrap:wrap;border-right:0;border-bottom:1px solid var(--line)}
+  .brand{padding-bottom:.25rem}
+  .grid,.stats{grid-template-columns:1fr}
+  .main{padding:1.25rem}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="side">
+    <div class="brand">
+      <div class="logo">S</div>
+      <div><div style="font-weight:800;font-size:1.05rem">Smile Care</div>
+      <div style="font-size:.8rem;color:var(--muted)">Clinic admin</div></div>
+    </div>
+    <a class="nav" data-nav="doctors" href="#/doctors">Doctors</a>
+    <a class="nav" data-nav="patients" href="#/patients">Patients</a>
+    <a class="nav" data-nav="appointments" href="#/appointments">Appointments</a>
+    <a class="nav" data-nav="calls" href="#/calls">Call activity</a>
+    <a class="nav" data-nav="settings" href="#/settings">Settings</a>
+  </aside>
+
+  <main class="main">
+
+    <!-- ============ DOCTORS ============ -->
+    <section class="view" data-view="doctors">
+      <header>
+        <h1>Doctors</h1>
+        <p class="sub">Choose who the voice assistant can suggest and book.</p>
+      </header>
+
+      <div class="stats">
+        <div class="card"><div class="k">Active doctors</div><div class="n" id="statActive">–</div></div>
+        <div class="card"><div class="k">Inactive</div><div class="n" id="statInactive">–</div></div>
+        <div class="card"><div class="k">Specializations in use</div><div class="n" id="statSpecs">–</div></div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h2>All doctors</h2>
+          <div class="wrap">
+            <table>
+              <thead><tr><th>Doctor</th><th>Specialization</th><th>Fee</th><th>Status</th><th></th></tr></thead>
+              <tbody id="doctorRows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Add a doctor</h2>
+          <form id="addForm" novalidate>
+            <label class="lbl" for="addName">Full name</label>
+            <input class="in" id="addName" maxlength="100" placeholder="Dr. Priya Singh" autocomplete="off">
+
+            <label class="lbl" for="addSpec">Specialization</label>
+            <select class="in" id="addSpec"></select>
+            <p class="hint">Only these types are accepted, so the assistant can always match the right doctor.</p>
+
+            <label class="lbl" for="addFee">Consultation fee (₹)</label>
+            <input class="in" id="addFee" type="number" min="0" step="0.01" inputmode="decimal" placeholder="500">
+
+            <div class="lbl">Status</div>
+            <label class="sw"><input type="checkbox" id="addActive" checked aria-label="New doctor is active"><span class="trk"></span><span class="st"></span></label>
+
+            <p class="err" id="addErr" role="alert" hidden></p>
+            <button class="btn" id="addBtn" type="submit" style="width:100%;margin-top:1.25rem">Save doctor</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PATIENTS ============ -->
+    <section class="view" data-view="patients" hidden>
+      <header style="display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;flex-wrap:wrap">
+        <div><h1>Patients</h1><p class="sub">Everyone who has booked with the assistant.</p></div>
+        <span class="live">Updates automatically</span>
+      </header>
+      <div class="card">
+        <div class="filters">
+          <div class="f grow">
+            <label class="lbl" for="pSearch">Search</label>
+            <input class="in" id="pSearch" type="search" placeholder="Name or phone number" autocomplete="off">
+          </div>
+        </div>
+        <div class="wrap">
+          <table>
+            <thead><tr><th>Patient</th><th>Phone</th><th style="text-align:right">Appointments</th><th style="text-align:right">Upcoming</th><th>Next appointment</th><th>Registered</th></tr></thead>
+            <tbody id="patientRows"></tbody>
+          </table>
+        </div>
+        <div class="pager" id="patientPager"></div>
+      </div>
+    </section>
+
+    <!-- ============ APPOINTMENTS ============ -->
+    <section class="view" data-view="appointments" hidden>
+      <header style="display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;flex-wrap:wrap">
+        <div><h1>Appointments</h1><p class="sub">Every booking, live.</p></div>
+        <span class="live">Updates automatically</span>
+      </header>
+      <div class="card">
+        <div class="filters">
+          <div class="f">
+            <label class="lbl" for="aScope">Show</label>
+            <select class="in" id="aScope">
+              <option value="upcoming">Today and upcoming</option>
+              <option value="past">Past</option>
+              <option value="all">All</option>
+            </select>
+          </div>
+          <div class="f">
+            <label class="lbl" for="aDate">On a specific day</label>
+            <input class="in" id="aDate" type="date">
+          </div>
+          <div class="f">
+            <label class="lbl" for="aDoctor">Doctor</label>
+            <select class="in" id="aDoctor"><option value="">All doctors</option></select>
+          </div>
+          <div class="f">
+            <label class="lbl" for="aStatus">Status</label>
+            <select class="in" id="aStatus">
+              <option value="">Any status</option>
+              <option value="booked">Booked</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+          <div class="f grow">
+            <label class="lbl" for="aSearch">Patient</label>
+            <input class="in" id="aSearch" type="search" placeholder="Name or phone number" autocomplete="off">
+          </div>
+          <button class="btn ghost small" id="aClear" type="button">Clear filters</button>
+        </div>
+        <div class="wrap">
+          <table class="wide">
+            <thead><tr><th>Date</th><th>Time</th><th>Patient</th><th>Phone</th><th>Doctor</th><th>Status</th><th></th></tr></thead>
+            <tbody id="apptRows"></tbody>
+          </table>
+        </div>
+        <div class="pager" id="apptPager"></div>
+      </div>
+    </section>
+
+    <!-- ============ LATER ============ -->
+    <section class="view" data-view="calls" hidden>
+      <header><h1>Call activity</h1><p class="sub">Every call the assistant handled.</p></header>
+      <div class="card">Coming later, once calls are saved to the database.</div>
+    </section>
+    <section class="view" data-view="settings" hidden>
+      <header><h1>Settings</h1><p class="sub">Clinic details and assistant preferences.</p></header>
+      <div class="card">Coming soon.</div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Edit doctor (native <dialog>: focus handling and Esc key come built in) -->
+<dialog id="editDlg" aria-labelledby="editTitle">
+  <h2 id="editTitle">Edit doctor</h2>
+  <form id="editForm" novalidate>
+    <label class="lbl" for="editName">Full name</label>
+    <input class="in" id="editName" maxlength="100" autocomplete="off">
+    <label class="lbl" for="editSpec">Specialization</label>
+    <select class="in" id="editSpec"></select>
+    <label class="lbl" for="editFee">Consultation fee (₹)</label>
+    <input class="in" id="editFee" type="number" min="0" step="0.01" inputmode="decimal">
+    <p class="err" id="editErr" role="alert" hidden></p>
+    <div class="row">
+      <button class="btn ghost" id="editCancel" type="button">Cancel</button>
+      <button class="btn" id="editSave" type="submit">Save changes</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Are-you-sure box, reused for cancelling an appointment and deactivating a busy doctor -->
+<dialog id="confirmDlg" aria-labelledby="confirmTitle">
+  <h2 id="confirmTitle"></h2>
+  <p id="confirmMsg" style="margin:.4rem 0 0;line-height:1.5"></p>
+  <div class="row">
+    <button class="btn ghost" id="confirmNo" type="button">Go back</button>
+    <button class="btn" id="confirmOk" type="button">Confirm</button>
+  </div>
+</dialog>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ==================================================================
+   Helpers shared by every page
+================================================================== */
+const $ = (selector) => document.querySelector(selector);
+const money = new Intl.NumberFormat("en-IN", {
+  style: "currency", currency: "INR", minimumFractionDigits: 0, maximumFractionDigits: 2,
+});
+const dateFmt = new Intl.DateTimeFormat("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+const timeFmt = new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-digit", hour12: true });
+const fmtDate = (isoDate) => dateFmt.format(new Date(isoDate + "T00:00:00"));      /* "2026-10-13" */
+const fmtDateTime = (iso) => `${dateFmt.format(new Date(iso))}, ${timeFmt.format(new Date(iso))}`;
+function fmtTime(t) {                                                              /* "17:00:00" -> "5:00 PM" */
+  const [h, m] = t.split(":").map(Number);
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
+}
+
+let toastTimer;
+function toast(message, bad = false) {
+  const el = $("#toast");
+  el.textContent = message;
+  el.classList.toggle("bad", bad);
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 3500);
+}
+
+/* Talk to the backend. Throws an Error with a human-readable message. */
+async function api(path, { method = "GET", body } = {}) {
+  let response;
+  try {
+    response = await fetch("/api" + path, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch {
+    throw new Error("Cannot reach the server. Is it running?");
+  }
+  if (!response.ok) {
+    let detail = "Something went wrong. Please try again.";
+    try { detail = describeError(await response.json()); } catch { /* keep default */ }
+    throw new Error(detail);
+  }
+  return response.json();
+}
+
+/* FastAPI errors are either {detail: "text"} or {detail: [{loc, msg}, ...]}. */
+function describeError(payload) {
+  const d = payload.detail;
+  if (typeof d === "string") return d;
+  if (Array.isArray(d)) {
+    return d.map((item) => {
+      const field = (item.loc || []).slice(1).join(" ");
+      const text = String(item.msg || "").replace(/^Value error, /, "");
+      return field ? `${field}: ${text}` : text;
+    }).join(" ");
+  }
+  return "Request failed.";
+}
+
+function showError(el, message) { el.textContent = message; el.hidden = !message; }
+
+/* A one-cell message row inside a table body ("Loading…", "No results", errors). */
+function messageRow(tbody, columns, text, retry) {
+  const tr = document.createElement("tr");
+  const td = document.createElement("td");
+  td.colSpan = columns; td.className = "msg"; td.textContent = text + " ";
+  if (retry) {
+    const b = document.createElement("button");
+    b.className = "lnk"; b.type = "button"; b.textContent = "Try again";
+    b.addEventListener("click", retry);
+    td.appendChild(b);
+  }
+  tr.appendChild(td);
+  tbody.replaceChildren(tr);
+}
+
+/* textContent only, never innerHTML: nothing typed by a patient can inject HTML. */
+function cell(text, className) {
+  const td = document.createElement("td");
+  td.textContent = text;
+  if (className) td.className = className;
+  return td;
+}
+
+/* "Showing 1-25 of 120"  [Previous] [Next] */
+function renderPager(el, { page, limit, total }, go) {
+  const from = total === 0 ? 0 : page * limit + 1;
+  const to = Math.min(total, (page + 1) * limit);
+  const info = document.createElement("span");
+  info.textContent = total === 0 ? "No results" : `Showing ${from}–${to} of ${total}`;
+  const buttons = document.createElement("div");
+  buttons.className = "btns";
+  const make = (label, disabled, target) => {
+    const b = document.createElement("button");
+    b.className = "btn ghost small"; b.type = "button"; b.textContent = label; b.disabled = disabled;
+    b.addEventListener("click", () => go(target));
+    return b;
+  };
+  buttons.append(make("Previous", page === 0, page - 1), make("Next", to >= total, page + 1));
+  el.replaceChildren(info, buttons);
+}
+
+/* Are-you-sure box. Resolves true (confirmed) or false (go back / Esc). */
+function askConfirm({ title, message, okLabel, danger = false }) {
+  return new Promise((resolve) => {
+    const dlg = $("#confirmDlg");
+    $("#confirmTitle").textContent = title;
+    $("#confirmMsg").textContent = message;
+    const ok = $("#confirmOk");
+    ok.textContent = okLabel;
+    ok.classList.toggle("danger", danger);
+    ok.onclick = () => { resolve(true); dlg.close(); };
+    $("#confirmNo").onclick = () => { resolve(false); dlg.close(); };
+    dlg.onclose = () => resolve(false);          /* Esc key: the first resolve() wins */
+    dlg.showModal();
+    $("#confirmNo").focus();                     /* safest default: "Go back" */
+  });
+}
+
+/* ==================================================================
+   Page switching: #/doctors, #/patients, #/appointments ...
+================================================================== */
+const currentView = () => {
+  const wanted = location.hash.replace("#/", "") || "doctors";
+  return document.querySelector(`[data-view="${wanted}"]`) ? wanted : "doctors";
+};
+
+function route() {
+  const view = currentView();
+  document.querySelectorAll("[data-view]").forEach((v) => { v.hidden = v.dataset.view !== view; });
+  document.querySelectorAll("[data-nav]").forEach((a) => {
+    const on = a.dataset.nav === view;
+    a.classList.toggle("on", on);
+    if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+  });
+  if (view === "patients") loadPatients();
+  if (view === "appointments") loadAppointments();
+}
+window.addEventListener("hashchange", route);
+
+/* ==================================================================
+   DOCTORS
+================================================================== */
+let doctors = [];
+let specializations = [];
+const doctorRowsEl = $("#doctorRows");
+
+function statusToggle(doctor) {
+  const label = document.createElement("label");
+  label.className = "sw";
+  const input = document.createElement("input");
+  input.type = "checkbox";
+  input.checked = doctor.is_active;
+  input.setAttribute("aria-label", `${doctor.name} is active`);
+  input.addEventListener("change", async () => {
+    const wanted = input.checked;
+    input.disabled = true;
+    try {
+      /* Switching OFF a doctor who still has bookings: ask first. */
+      if (!wanted) {
+        const { upcoming_appointments: n } = await api(`/doctors/${doctor.id}/upcoming`);
+        if (n > 0) {
+          const proceed = await askConfirm({
+            title: `Deactivate ${doctor.name}?`,
+            message: `${doctor.name} has ${n} upcoming booked appointment${n === 1 ? "" : "s"}. ` +
+                     `They stay booked, but the assistant will stop offering this doctor to new callers. ` +
+                     `You may want to contact those patients.`,
+            okLabel: "Yes, deactivate", danger: true,
+          });
+          if (!proceed) { input.checked = true; input.disabled = false; return; }
+        }
+      }
+      const saved = await api(`/doctors/${doctor.id}/active`, { method: "PATCH", body: { is_active: wanted } });
+      doctors = doctors.map((d) => (d.id === saved.id ? saved : d));
+      renderDoctors();
+      toast(`${saved.name} is now ${saved.is_active ? "active" : "inactive"}.`);
+    } catch (error) {
+      input.checked = !wanted;                 /* put the switch back */
+      input.disabled = false;
+      toast(error.message, true);
+    }
+  });
+  const track = document.createElement("span"); track.className = "trk";
+  const state = document.createElement("span"); state.className = "st";
+  label.append(input, track, state);
+  const td = document.createElement("td");
+  td.appendChild(label);
+  return td;
+}
+
+function doctorRow(doctor) {
+  const tr = document.createElement("tr");
+  if (!doctor.is_active) tr.className = "dim";
+  const edit = document.createElement("button");
+  edit.className = "lnk"; edit.type = "button"; edit.textContent = "Edit";
+  edit.setAttribute("aria-label", `Edit ${doctor.name}`);
+  edit.addEventListener("click", () => openEdit(doctor));
+  const actions = document.createElement("td");
+  actions.appendChild(edit);
+  tr.append(
+    cell(doctor.name, "name"),
+    cell(doctor.specialization),
+    cell(money.format(doctor.consultation_fee)),
+    statusToggle(doctor),
+    actions,
+  );
+  return tr;
+}
+
+function renderDoctors() {
+  if (doctors.length === 0) {
+    messageRow(doctorRowsEl, 5, "No doctors yet. Add the first one on the right.");
+  } else {
+    doctorRowsEl.replaceChildren(...doctors.map(doctorRow));
+  }
+  const active = doctors.filter((d) => d.is_active).length;
+  $("#statActive").textContent = active;
+  $("#statInactive").textContent = doctors.length - active;
+  $("#statSpecs").textContent = new Set(doctors.map((d) => d.specialization)).size;
+  fillDoctorFilter();
+}
+
+async function loadDoctors() {
+  messageRow(doctorRowsEl, 5, "Loading doctors…");
+  try {
+    doctors = await api("/doctors");
+    renderDoctors();
+  } catch (error) {
+    messageRow(doctorRowsEl, 5, error.message, loadDoctors);
+  }
+}
+
+function fillSpecializations() {
+  for (const select of [$("#addSpec"), $("#editSpec")]) {
+    select.replaceChildren(...specializations.map((name) => new Option(name, name)));
+  }
+}
+
+/* ---- add a doctor ---- */
+$("#addForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const err = $("#addErr");
+  showError(err, "");
+  const name = $("#addName").value.trim();
+  const fee = $("#addFee").value;
+  if (!name) return showError(err, "Please enter the doctor's name.");
+  if (fee === "") return showError(err, "Please enter the consultation fee.");
+
+  const button = $("#addBtn");
+  button.disabled = true;
+  try {
+    const saved = await api("/doctors", {
+      method: "POST",
+      body: {
+        name,
+        specialization: $("#addSpec").value,
+        consultation_fee: Number(fee),
+        is_active: $("#addActive").checked,
+      },
+    });
+    event.target.reset();
+    $("#addActive").checked = true;
+    await loadDoctors();
+    toast(`${saved.name} was added.`);
+  } catch (error) {
+    showError(err, error.message);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+/* ---- edit a doctor ---- */
+let editing = null;
+function openEdit(doctor) {
+  editing = doctor;
+  showError($("#editErr"), "");
+  $("#editName").value = doctor.name;
+  $("#editSpec").value = doctor.specialization;
+  $("#editFee").value = doctor.consultation_fee;
+  $("#editDlg").showModal();
+  $("#editName").focus();
+}
+$("#editCancel").addEventListener("click", () => $("#editDlg").close());
+$("#editForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const err = $("#editErr");
+  showError(err, "");
+  const name = $("#editName").value.trim();
+  const fee = $("#editFee").value;
+  if (!name) return showError(err, "Please enter the doctor's name.");
+  if (fee === "") return showError(err, "Please enter the consultation fee.");
+
+  const button = $("#editSave");
+  button.disabled = true;
+  try {
+    const saved = await api(`/doctors/${editing.id}`, {
+      method: "PATCH",
+      body: { name, specialization: $("#editSpec").value, consultation_fee: Number(fee) },
+    });
+    doctors = doctors.map((d) => (d.id === saved.id ? saved : d));
+    renderDoctors();
+    $("#editDlg").close();
+    toast("Changes saved.");
+  } catch (error) {
+    showError(err, error.message);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+/* ==================================================================
+   PATIENTS
+================================================================== */
+const pState = { q: "", page: 0, limit: 25 };
+const patientRowsEl = $("#patientRows");
+
+function patientRow(p) {
+  const tr = document.createElement("tr");
+  tr.append(
+    cell(p.name, "name"),
+    cell(p.phone),
+    cell(p.total_appointments, "num"),
+    cell(p.upcoming_appointments, "num"),
+    cell(p.next_appointment ? fmtDateTime(p.next_appointment) : "–"),
+    cell(dateFmt.format(new Date(p.created_at))),
+  );
+  return tr;
+}
+
+async function loadPatients(silent = false) {
+  if (!silent) messageRow(patientRowsEl, 6, "Loading patients…");
+  try {
+    const params = new URLSearchParams({ q: pState.q, limit: pState.limit, offset: pState.page * pState.limit });
+    const data = await api(`/patients?${params}`);
+    if (data.items.length === 0 && pState.page > 0) {            /* page no longer exists */
+      pState.page = Math.max(0, Math.ceil(data.total / pState.limit) - 1);
+      return loadPatients(silent);
+    }
+    if (data.items.length === 0) {
+      messageRow(patientRowsEl, 6, pState.q ? "No patients match your search." : "No patients yet. They appear here after their first booking.");
+    } else {
+      patientRowsEl.replaceChildren(...data.items.map(patientRow));
+    }
+    renderPager($("#patientPager"), { page: pState.page, limit: pState.limit, total: data.total },
+      (page) => { pState.page = page; loadPatients(); });
+  } catch (error) {
+    if (!silent) messageRow(patientRowsEl, 6, error.message, loadPatients);
+  }
+}
+
+function debounce(fn, ms = 300) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+$("#pSearch").addEventListener("input", debounce((event) => {
+  pState.q = event.target.value.trim(); pState.page = 0; loadPatients();
+}));
+
+/* ==================================================================
+   APPOINTMENTS
+================================================================== */
+const aState = { scope: "upcoming", date: "", doctor: "", status: "", q: "", page: 0, limit: 25 };
+const apptRowsEl = $("#apptRows");
+
+function fillDoctorFilter() {
+  const select = $("#aDoctor");
+  const keep = select.value;
+  select.replaceChildren(new Option("All doctors", ""),
+    ...doctors.map((d) => new Option(d.is_active ? d.name : `${d.name} (inactive)`, String(d.id))));
+  select.value = keep;
+}
+
+function apptRow(a) {
+  const tr = document.createElement("tr");
+  if (a.status !== "booked") tr.className = "dim";
+
+  const doctorCell = cell(a.doctor_name);
+  const spec = document.createElement("small");
+  spec.textContent = a.doctor_specialization;
+  doctorCell.appendChild(spec);
+
+  const chip = document.createElement("span");
+  chip.className = `chip ${a.status}`;
+  chip.textContent = a.status[0].toUpperCase() + a.status.slice(1);
+  const statusCell = document.createElement("td");
+  statusCell.appendChild(chip);
+
+  const actions = document.createElement("td");
+  if (a.status === "booked") {
+    for (const [label, next, danger] of [["Complete", "completed", false], ["Cancel", "cancelled", true]]) {
+      const b = document.createElement("button");
+      b.className = "lnk" + (danger ? " danger" : ""); b.type = "button"; b.textContent = label;
+      b.setAttribute("aria-label", `${label} appointment for ${a.patient_name}`);
+      b.addEventListener("click", () => changeStatus(a, next));
+      actions.appendChild(b);
+    }
+  }
+  tr.append(cell(fmtDate(a.appointment_date)), cell(fmtTime(a.appointment_time)),
+            cell(a.patient_name, "name"), cell(a.patient_phone), doctorCell, statusCell, actions);
+  return tr;
+}
+
+async function loadAppointments(silent = false) {
+  if (!silent) messageRow(apptRowsEl, 7, "Loading appointments…");
+  try {
+    const params = new URLSearchParams({ scope: aState.scope, limit: aState.limit, offset: aState.page * aState.limit });
+    if (aState.date) params.set("date", aState.date);
+    if (aState.doctor) params.set("doctor_id", aState.doctor);
+    if (aState.status) params.set("status", aState.status);
+    if (aState.q) params.set("q", aState.q);
+    const data = await api(`/appointments?${params}`);
+    if (data.items.length === 0 && aState.page > 0) {
+      aState.page = Math.max(0, Math.ceil(data.total / aState.limit) - 1);
+      return loadAppointments(silent);
+    }
+    if (data.items.length === 0) {
+      messageRow(apptRowsEl, 7, "No appointments match these filters.");
+    } else {
+      apptRowsEl.replaceChildren(...data.items.map(apptRow));
+    }
+    renderPager($("#apptPager"), { page: aState.page, limit: aState.limit, total: data.total },
+      (page) => { aState.page = page; loadAppointments(); });
+  } catch (error) {
+    if (!silent) messageRow(apptRowsEl, 7, error.message, loadAppointments);
+  }
+}
+
+async function changeStatus(a, next) {
+  const cancelling = next === "cancelled";
+  const proceed = await askConfirm({
+    title: cancelling ? "Cancel this appointment?" : "Mark as completed?",
+    message: `${a.patient_name} with ${a.doctor_name} on ${fmtDate(a.appointment_date)} at ${fmtTime(a.appointment_time)}.` +
+             (cancelling ? " The time slot becomes free for new bookings." : ""),
+    okLabel: cancelling ? "Yes, cancel it" : "Yes, mark completed",
+    danger: cancelling,
+  });
+  if (!proceed) return;
+  try {
+    await api(`/appointments/${a.id}/status`, { method: "PATCH", body: { status: next } });
+    toast(cancelling ? "Appointment cancelled." : "Marked as completed.");
+  } catch (error) {
+    toast(error.message, true);
+  }
+  loadAppointments(true);
+}
+
+/* filters: any change goes back to page 1 */
+const reloadFromStart = () => { aState.page = 0; loadAppointments(); };
+$("#aScope").addEventListener("change", (e) => { aState.scope = e.target.value; reloadFromStart(); });
+$("#aDate").addEventListener("change", (e) => { aState.date = e.target.value; reloadFromStart(); });
+$("#aDoctor").addEventListener("change", (e) => { aState.doctor = e.target.value; reloadFromStart(); });
+$("#aStatus").addEventListener("change", (e) => { aState.status = e.target.value; reloadFromStart(); });
+$("#aSearch").addEventListener("input", debounce((e) => { aState.q = e.target.value.trim(); reloadFromStart(); }));
+$("#aClear").addEventListener("click", () => {
+  Object.assign(aState, { scope: "upcoming", date: "", doctor: "", status: "", q: "", page: 0 });
+  $("#aScope").value = "upcoming"; $("#aDate").value = ""; $("#aDoctor").value = "";
+  $("#aStatus").value = ""; $("#aSearch").value = "";
+  loadAppointments();
+});
+
+/* ==================================================================
+   Live feel: refresh the visible list every 5 seconds
+================================================================== */
+setInterval(() => {
+  if (document.hidden) return;
+  if ($("#confirmDlg").open || $("#editDlg").open) return;      /* never under a dialog */
+  const view = currentView();
+  if (view === "patients") loadPatients(true);
+  if (view === "appointments") loadAppointments(true);
+}, 5000);
+
+/* ==================================================================
+   Start
+================================================================== */
+(async function start() {
+  route();
+  try {
+    specializations = await api("/specializations");
+    fillSpecializations();
+  } catch (error) {
+    toast(error.message, true);
+  }
+  loadDoctors();
+})();
+</script>
+</body>
+</html>

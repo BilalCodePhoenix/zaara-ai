@@ -1,0 +1,27 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Secrets: never commit these
+.env
+.env.*
+!.env.example
+
+# Logs, recordings and local data
+*.log
+logs/
+recordings/
+*.wav
+*.mp3
+*.dump
+*.sql.bak
+
+# Editors and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
