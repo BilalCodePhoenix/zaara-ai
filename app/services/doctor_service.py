@@ -21,14 +21,16 @@ def recommend_doctor(problem):
     doctors = get_available_doctors()
     problem = problem.lower()
 
-    if "toothache" in problem or "tooth pain" in problem:
-        specialization = "Endodontist"
-
-    elif "braces" in problem or "crooked teeth" in problem:
+    # Specific rules first. "wisdom tooth pain" contains "tooth pain",
+    # so the generic toothache rule has to be checked last.
+    if "braces" in problem or "crooked teeth" in problem:
         specialization = "Orthodontist"
 
     elif "wisdom tooth" in problem or "surgery" in problem:
         specialization = "Oral Surgeon"
+
+    elif "toothache" in problem or "tooth pain" in problem:
+        specialization = "Endodontist"
 
     else:
         specialization = "General Dentist"

@@ -9,7 +9,8 @@ def get_doctors():
     cursor.execute("""
         SELECT id, name, specialization, consultation_fee
         FROM doctors
-        WHERE is_active = TRUE;
+        WHERE is_active = TRUE
+        ORDER BY id;
     """)
 
     doctors = cursor.fetchall()
