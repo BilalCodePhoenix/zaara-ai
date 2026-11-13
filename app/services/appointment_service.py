@@ -9,6 +9,16 @@ from datetime import date, datetime, time, timedelta
 logger = logging.getLogger(__name__)
 
 
+def _is_bookable_day(appointment_date):
+    """Clinic is closed on Sundays, and we never book past dates."""
+    if isinstance(appointment_date, str):
+        appointment_date = date.fromisoformat(appointment_date)
+    return (
+        appointment_date.weekday() != 6
+        and appointment_date >= date.today()
+    )
+
+
 def check_availability(
     doctor_id,
     appointment_date,
@@ -24,6 +34,14 @@ def check_availability(
         )
 
     if appointment_time < time(9, 0) or appointment_time >= time(18, 0):
+        return False
+
+    if not _is_bookable_day(appointment_date):
+        return False
+#  it will cover the past timing and will make sure anyone cant book any slot in past
+    if isinstance(appointment_date, str):
+        appointment_date = date.fromisoformat(appointment_date)
+    if datetime.combine(appointment_date, appointment_time) <= datetime.now():
         return False
 
     try:
@@ -179,6 +197,9 @@ def find_available_slots(
         if isinstance(start_time, str):
             start_time = time.fromisoformat(start_time)
 
+        if not _is_bookable_day(appointment_date):
+            return []
+
         current_datetime = datetime.combine(
             appointment_date,
             start_time
@@ -192,6 +213,10 @@ def find_available_slots(
 
             if current_time >= time(18, 0):
                 break
+
+            if current_datetime <= datetime.now():
+                current_datetime += timedelta(minutes=30)
+                continue
 
             cursor.execute(
                 """
@@ -215,7 +240,7 @@ def find_available_slots(
             if len(available_slots) >= number_of_slots:
                 break
 
-            current_datetime += timedelta(minutes=30)
+            current_datetime += timedelta(minutes=30) 
 
         return available_slots
 
