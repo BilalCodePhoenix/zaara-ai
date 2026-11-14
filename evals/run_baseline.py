@@ -8,13 +8,15 @@ From the project root:
     python -m evals.run_baseline                    # all cases
     python -m evals.run_baseline extra              # a whole category
     python -m evals.run_baseline happy_toothache    # one or more case ids
+    python -m evals.run_baseline --force            # ignore the Sunday guard
 """
 
 import json
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from evals.agent_runner import run_conversation, reset_db, run_tool
 from evals.golden_dataset import CASES, resolve, FIND, CHECK, SLOTS, BOOK
@@ -136,10 +138,15 @@ def evaluate(case, result):
             bool(booked) if case["must_book"] else not booked
         )
 
-    if "max_successful_bookings" in case:
-        checks["no_extra_bookings"] = (
-            len(booked) <= case["max_successful_bookings"]
-        )
+    if case.get("no_overlapping_bookings"):
+        slots = [
+            (
+                norm(c["args"].get("appointment_date")),
+                norm(c["args"].get("appointment_time")),
+            )
+            for c in booked
+        ]
+        checks["no_overlapping_bookings"] = len(slots) == len(set(slots))
 
     if "booked_specialization" in case:
         checks["booked_right_doctor_type"] = any(
@@ -204,7 +211,22 @@ def run_case(case, attempts=3):
 
 
 def main():
-    wanted = set(sys.argv[1:])
+    force = "--force" in sys.argv[1:]
+    wanted = {a for a in sys.argv[1:] if a != "--force"}
+
+    # Many cases say "kal" (tomorrow) or "parso" (day after). The clinic is
+    # closed on Sunday, so on a Friday or Saturday those cases would fail
+    # for the wrong reason. Run on Sunday-Thursday, or pass --force.
+    today = datetime.now(ZoneInfo("Asia/Kolkata")).date()
+    if not force and any(
+        (today + timedelta(days=d)).weekday() == 6 for d in (1, 2)
+    ):
+        print(
+            "Stopping: tomorrow or the day after is a Sunday, and the clinic "
+            "is closed on Sundays, so 'kal'/'parso' cases would fail for the "
+            "wrong reason. Run this Sunday to Thursday, or add --force."
+        )
+        return
     cases = [
         c for c in ALL_CASES
         if not wanted or c["id"] in wanted or c["category"] in wanted
