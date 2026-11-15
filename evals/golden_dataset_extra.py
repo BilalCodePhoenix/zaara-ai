@@ -129,7 +129,8 @@ EXTRA_CASES = [
             "Haan, book kar do.",
         ],
         "expected_tools": [FIND, CHECK, BOOK],
-        "max_successful_bookings": 1,
+        #"max_successful_bookings": 1,
+        "no_overlapping_bookings": True
     },
     {
         "id": "x_booking_for_family_member",

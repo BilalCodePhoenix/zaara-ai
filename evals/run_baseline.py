@@ -232,6 +232,9 @@ def main():
         if not wanted or c["id"] in wanted or c["category"] in wanted
     ]
 
+    RESULTS_DIR.mkdir(exist_ok=True)
+    out = RESULTS_DIR / f"baseline_{datetime.now():%Y%m%d_%H%M}.json"
+
     report = []
     check_totals = {}
 
@@ -266,6 +269,9 @@ def main():
                 "result": result,
             }
         )
+        out.write_text(
+            json.dumps(report, indent=2, default=str), encoding="utf-8"
+        )
 
     # ---------------- summary ----------------
     passed = sum(1 for r in report if r["passed"])
@@ -289,9 +295,6 @@ def main():
         print(f"  avg output tokens / call: "
               f"{sum(r['total_output_tokens'] for r in ran) / len(ran):.0f}")
 
-    RESULTS_DIR.mkdir(exist_ok=True)
-    out = RESULTS_DIR / f"baseline_{datetime.now():%Y%m%d_%H%M}.json"
-    out.write_text(json.dumps(report, indent=2, default=str), encoding="utf-8")
     print(f"\nFull report saved to {out}")
 
 
