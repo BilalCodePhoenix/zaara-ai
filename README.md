@@ -24,7 +24,7 @@
 12. [Project structure](#project-structure)
 13. [Getting started](#getting-started)
 14. [Configuration](#configuration)
-15. [Testing](#testing)
+15. [Testing and evaluation](#testing-and-evaluation)
 16. [Security and privacy](#security-and-privacy)
 17. [Known limitations](#known-limitations)
 18. [Roadmap](#roadmap)
@@ -198,7 +198,7 @@ Today:
 - Every tool call and result is logged with its duration (`TOOL CALL ->` and `TOOL RESULT <-`).
 - Pipecat's logs show transcripts and turn events for debugging.
 
-Planned: save per-call latency, token use and cost to the database, show them in the dashboard's Call activity page, and track accuracy on a fixed set of scripted test calls.
+Accuracy on a fixed set of scripted test calls is tracked by the eval suite (see [Testing and evaluation](#testing-and-evaluation)). Planned: save per-call latency, token use and cost to the database and show them in the dashboard's Call activity page.
 
 ## Tech stack
 
@@ -230,6 +230,8 @@ app/
   exceptions.py shared exception types
 db/             schema.sql (tables and constraints) and seed data
 scripts/        benchmark_ollama.py (latency evidence)
+tests/          pytest tests for backend rules (doctor routing, clinic hours)
+evals/          agent eval suite: golden cases, runner, scoring (see evals/README.md)
 docs/images/    screenshots
 ```
 Request path: **tools -> services -> database.** The LLM only ever sees the tools.
@@ -291,11 +293,29 @@ uv run python scripts/benchmark_ollama.py
 | `CARTESIA_API_KEY` | voice agent | Text-to-speech |
 | `GOOGLE_API_KEY` | voice agent | Gemini LLM |
 | `GEMINI_API_KEY` | text harness | `app/llm/client.py` |
+| `TEST_DATABASE_URL` | evals only | A separate `dental_test` database. Must differ from `DATABASE_URL`; the evals refuse to run on the real database. |
 
 Constants near the top of the voice agent file: clinic name, address, Gemini model name, Cartesia voice id and the tool timeout.
 
-## Testing
-Honest status: the project has been tested **manually** with scripted conversations, including:
+## Testing and evaluation
+Zaara is tested at three levels.
+
+**1. Backend tests (`pytest`, no AI involved).** `tests/` checks the rules the backend must enforce on its own: doctor routing, opening hours, Sundays closed, and no past dates or past times.
+```bash
+uv run python -m pytest tests/ -v
+```
+
+**2. Agent evals (`evals/`).** A suite of 38 scripted Hinglish call scenarios plays against Zaara's real prompt and tools on an isolated test database and scores what she does: tool-call order and arguments, doctor IDs taken from tools, fabricated booking claims, guardrails and reply length.
+
+| Run | Result |
+|---|---|
+| First runs (18 + 20 cases) | 34/38 |
+| Full run after the fixes | 38/38 |
+| Next full run | 37/38 (1 reply over the voice word limit) |
+
+The evals found a doctor-routing bug and a backend gap (Sunday and past-date closing was enforced only by the prompt). Both are fixed and covered by tests. The checks are rule-based, the cases are my own and the model is random, so a single run is not proof. Coverage, flow and how to run it: [`evals/README.md`](evals/README.md).
+
+**3. Manual testing.** Before the automated suites, the project was tested by hand with scripted conversations, including:
 - Slot requests on a closed day (Sunday) and on already booked times.
 - Rejected, short or wrongly formatted phone numbers.
 - Nicknames given instead of the full name.
@@ -305,7 +325,7 @@ Honest status: the project has been tested **manually** with scripted conversati
 
 Booking rules were also checked with direct service-level cases (same slot refused, same patient on other days and times allowed, same time with two doctors refused, two people on one number keeping their own bookings).
 
-An automated `pytest` suite and CI are on the [roadmap](#roadmap).
+CI that runs both suites on every push is on the [roadmap](#roadmap).
 
 ## Security and privacy
 - Secrets live in `.env`, which is never committed. Use `.env.example` as the template.
@@ -320,6 +340,7 @@ An automated `pytest` suite and CI are on the [roadmap](#roadmap).
 - Cancelling and rescheduling by voice are not implemented; callers are told to contact the clinic.
 - Clinic hours and address are written into the prompt, not configurable yet.
 - Doctor routing is keyword-based and returns the **first** doctor of a specialization, so a fully booked doctor is not skipped in favor of a colleague.
+- Callers cannot ask for a specific doctor by name: Zaara picks the doctor from the described problem.
 - Database outages currently surface as a booking error rather than a clear "system problem" message.
 - Hinglish speech recognition depends on audio quality; a headset noticeably improves accuracy.
 - Reliant on hosted AI services, which can be slow or return temporary "high demand" errors on free tiers.
@@ -330,8 +351,10 @@ An automated `pytest` suite and CI are on the [roadmap](#roadmap).
 - [x] Admin dashboard: doctors, patients, appointments
 - [ ] Admin authentication
 - [ ] Call logs with latency, token and cost tracking in the dashboard
-- [ ] Accuracy tracking on a fixed set of scripted calls
-- [ ] Automated tests (`pytest`) and CI
+- [x] Accuracy tracking on a fixed set of scripted calls (38-scenario eval suite)
+- [x] Automated tests (`pytest`)
+- [ ] CI that runs the tests and evals on every push
+- [ ] LLM-as-judge metrics (DeepEval) and a shorter prompt, measured before and after
 - [ ] Prompt-injection hardening and rate limits per phone number
 - [ ] Real phone number (telephony provider) with human fallback
 - [ ] Cancel and reschedule by voice
@@ -348,6 +371,7 @@ An automated `pytest` suite and CI are on the [roadmap](#roadmap).
 - **Small models are weak in Hinglish.** Gendered grammar and mixed scripts need a stronger model and explicit grammar reminders at the end of the prompt.
 - **Real-time code needs defensive plumbing.** Blocking calls, timeouts and shared audio-analyzer state caused real bugs until they were isolated per session.
 - **Test the unhappy paths.** Invalid numbers, closed days, nicknames and refusals found more bugs than the happy path ever did.
+- **Write the evals before trusting the demo.** A scripted suite found a doctor-routing bug and a backend gap that manual calls had missed, and it also caught a wrong test of my own.
 
 ## Vision
 A reliable front desk that speaks each patient's language, for every small clinic in India, at a price a clinic can afford: no missed calls, no double bookings, and clear visibility for the owner into what the assistant did and how well it did it.
